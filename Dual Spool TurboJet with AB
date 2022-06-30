@@ -1,0 +1,116 @@
+%Andrew Farmer Duial Spool AB TurboJet
+clc
+clear all
+close all 
+format long
+% Define all variables
+Tref = 518.7;
+Pref = 14.696;
+M0 = 0;
+m0 = 181.11;
+T0 = 518.7;
+P0 = 14.696;
+piDMax = .98;
+Tt4 = 3200;
+nB = .995;
+piB = .96;
+hPR = 18400;
+piCLR = 5;
+picHR = 4;
+gamC = 1.4;
+cpc = .24;
+ecL = .9;
+ecH = .9;
+gamT = 1.3;
+cpt = .295;
+etL = .9;
+etH = .9;
+Tt7max = 3600;
+nAB = .95;
+cpab = .295;
+piAB = .94;
+gamAB = 1.3;
+nmH = .995;
+nmL = .995;
+AB = true;
+piN = .98;
+po_p9 = 1;
+gc = 32.174;
+%START CALCS
+
+Rc = ((gamC-1)/(gamC))*cpc;
+Rt = ((gamT-1)/(gamT))*cpt;
+a0 = sqrt(gamC*Rc*24881.345*T0)
+Rab = ((gamAB-1)/(gamAB))*cpab;
+v0 = M0*a0;
+
+% Ram Temp 
+Tr = 1 + ((gamC-1)/2)*M0^2;
+piR = Tr ^(gamC/(gamC-1));
+Tt0 = T0*Tr;
+Tt1 = Tt0;
+if M0 < 1
+    nr = 1;
+else
+    nr = 1 - .075*(M0-1)^1.35;
+end
+piD =  nr*piDMax;
+Tt2 = Tt1*Tr;
+Pt2 = P0*piR*piD;
+
+%Compressor
+ncL = (((piCLR^((gamC-1)/(gamC)))-1)/((piCLR)^((gamC-1)/(gamC*ecL))-1));
+ncHR = (((picHR^((gamC-1)/(gamC)))-1)/((picHR)^((gamC-1)/(gamC*ecL))-1));
+
+tcLR = piCLR^((gamC-1)/(gamC*ecL));
+Tt2_5 = Tt2*tcLR;
+tcHR = picHR^((gamC-1)/(gamC*ecH));
+Tt3 = Tt2_5*tcHR;
+Pt3 = Pt2*piCLR*picHR;
+Tlam = (cpt*Tt4)/(cpc*T0);
+Tc = tcLR*tcHR;
+the2 = Tt2/Tref;
+del2 = Pt2/Pref;
+mc2 = m0*sqrt(the2)/del2;
+mfc = (mc2/the2)*((cpt*Tt4- cpc*Tt3)/(nB*hPR-cpt*Tt4));
+f = (cpt*Tt4 - cpc*Tt3)/(nB*hPR-cpt*Tt4);
+
+%Turbine Time
+
+TtHR = 1 - ((1)/(nmH*(1+f)))*((tcLR*Tr)/(Tlam))*(tcHR-1);
+pitHR = TtHR^((gamT)/((gamT-1)*etH));
+ntHR = (1 - TtHR) / (1-TtHR^(1/etH));
+TtLR = 1 - ((1)/(nmL*(1+f)))*((Tr)/(TtHR*Tlam))*(tcLR-1);
+ntLR = (1 - TtLR) / (1-TtLR^(1/etL));
+pitLR = TtLR^((gamT)/((gamT-1)*etL));
+Tt4_5 = Tt4*TtHR;
+Tt5 = Tt4_5*TtLR;
+Tt6 = Tt5;
+% Consider if the Afterburner is active
+if AB == true
+   Tt7 = Tt7max;
+else
+    Tt7 = Tt6;
+    cpAB = cpt;
+    gamAB = gamT;
+    RAB = Rt;
+end
+fAB = (1+f)*((cpab*Tt7-cpt*Tt6)/(nAB*hPR-cpab*Tt7));
+Tt8 = Tt7;
+Tt9 = Tt8;
+M8 = 1; 
+
+pt9_p9 = po_p9*piR*piD*picHR*piCLR*piB*pitHR*pitLR*piAB*piN;
+M9 = sqrt( ((2)/(gamAB-1))*((pt9_p9)^((gamAB-1)/((gamAB)))-1)); 
+T9_T0 = (Tt9/T0)/((pt9_p9)^((gamAB-1)/gamAB));
+V9_a0 = M9*sqrt(((gamAB*Rab)/(gamC*Rc))*T9_T0);
+
+%Performance Metrics 
+ST = (a0/gc)*((1+f+fAB)*(V9_a0)-M0 +(1+f+fAB)*(Rab/Rc)*(T9_T0)/(V9_a0)*(1-po_p9)/(gamC));
+TSFC = (f+fAB)/(ST)*3600;
+nTH = (a0^2*((1+f+fAB)*V9_a0^2-M0^2))/(2*gc*(f+fAB)*hPR*778);
+nP = (2*gc*v0*ST)/((a0^2)*(1+f+fAB)*V9_a0^2-M0^2);
+nO = nTH *nP;
+Thrust = m0*ST;
+%Numbers are slightly off due to unit conversion factor used for gas
+%constants R
